@@ -1,0 +1,623 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>英文單字遊戲</title>
+<link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;700;800;900&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --purple: #9B8EF5;
+    --pink: #F2A7C3;
+    --yellow: #F5D76E;
+    --mint: #7DDCB5;
+    --blue: #8BC4F5;
+    --dark: #2C2A4A;
+    --gray: #888;
+    --red: #F06060;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: 'Nunito', sans-serif; min-height: 100vh; overflow-x: hidden; background: #f0eeff; }
+  body::before {
+    content: ''; position: fixed; inset: 0;
+    background-image: linear-gradient(rgba(155,142,245,0.15) 1px,transparent 1px), linear-gradient(90deg,rgba(155,142,245,0.15) 1px,transparent 1px);
+    background-size: 28px 28px; pointer-events: none; z-index: 0;
+  }
+  .screen { display: none; position: relative; z-index: 1; min-height: 100vh; }
+  .screen.active { display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 24px 16px; }
+
+  /* deco */
+  .deco { position: fixed; pointer-events: none; z-index: 0; font-size: 28px; }
+  .deco-1{top:4%;left:3%;animation:float1 4s ease-in-out infinite}
+  .deco-2{top:8%;right:6%;animation:float2 5s ease-in-out infinite}
+  .deco-3{top:20%;left:8%;animation:float3 3.5s ease-in-out infinite}
+  .deco-4{bottom:15%;left:5%;animation:float1 4.5s ease-in-out infinite}
+  .deco-5{bottom:8%;right:4%;animation:float2 3.8s ease-in-out infinite}
+  .deco-6{top:45%;right:3%;animation:float3 4.2s ease-in-out infinite}
+  @keyframes float1{0%,100%{transform:translateY(0) rotate(0)}50%{transform:translateY(-12px) rotate(8deg)}}
+  @keyframes float2{0%,100%{transform:translateY(0) rotate(0)}50%{transform:translateY(-8px) rotate(-6deg)}}
+  @keyframes float3{0%,100%{transform:translateY(0)}50%{transform:translateY(-10px)}}
+
+  /* START */
+  #startScreen { background: radial-gradient(ellipse at 30% 20%,#d4ccff 0%,#b8a9f7 40%,#9b8ef5 100%); }
+  .start-content { text-align: center; position: relative; z-index: 2; }
+  .start-sub { font-size: 18px; font-weight: 700; color: rgba(255,255,255,.85); margin-bottom: 12px; letter-spacing: 2px; }
+  .start-title { font-size: clamp(36px,8vw,60px); font-weight: 900; color: var(--pink); text-shadow: 3px 3px 0 rgba(255,255,255,.5),5px 5px 0 rgba(155,142,245,.4); margin-bottom: 32px; line-height: 1.1; }
+  .start-btns { display: flex; flex-direction: column; gap: 12px; align-items: center; }
+  .btn-start { background: var(--yellow); color: var(--dark); border: none; border-radius: 50px; padding: 16px 52px; font-size: 20px; font-weight: 800; font-family: 'Nunito',sans-serif; cursor: pointer; box-shadow: 0 6px 0 #c8a830,0 8px 20px rgba(0,0,0,.15); transition: transform .1s,box-shadow .1s; }
+  .btn-start:active { transform: translateY(4px); box-shadow: 0 2px 0 #c8a830; }
+  .btn-edit-link { background: rgba(255,255,255,.25); color: white; border: 2px solid rgba(255,255,255,.5); border-radius: 50px; padding: 10px 32px; font-size: 15px; font-weight: 700; font-family: 'Nunito',sans-serif; cursor: pointer; transition: background .2s; }
+  .btn-edit-link:hover { background: rgba(255,255,255,.35); }
+
+  /* READY */
+  #readyScreen { background: radial-gradient(ellipse at 60% 30%,#c0f0e0 0%,#8de8c8 50%,#5dcaa5 100%); }
+  .cloud-box { background: white; border-radius: 60px; padding: 48px 52px; text-align: center; position: relative; box-shadow: 0 8px 40px rgba(0,0,0,.08); max-width: 460px; width: 100%; z-index: 2; }
+  .cloud-box::before,.cloud-box::after { content:''; position:absolute; background:white; border-radius:50%; }
+  .cloud-box::before{width:80px;height:80px;top:-30px;left:40px}
+  .cloud-box::after{width:60px;height:60px;top:-20px;right:60px}
+  .ready-title { font-size: clamp(32px,7vw,52px); font-weight: 900; color: var(--pink); margin-bottom: 28px; }
+  .btn-ready { background: var(--yellow); color: var(--dark); border: none; border-radius: 50px; padding: 14px 44px; font-size: 18px; font-weight: 800; font-family: 'Nunito',sans-serif; cursor: pointer; box-shadow: 0 5px 0 #c8a830; transition: transform .1s,box-shadow .1s; }
+  .btn-ready:active { transform: translateY(3px); box-shadow: 0 2px 0 #c8a830; }
+
+  /* GAME */
+  #gameScreen { background: #f0eeff; padding-top: 16px; padding-bottom: 16px; }
+  .game-wrapper { width: 100%; max-width: 500px; z-index: 2; }
+  .top-bar { display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; }
+  .score-pill { background: var(--pink); color: white; border-radius: 50px; padding: 6px 20px; font-size: 15px; font-weight: 800; box-shadow: 0 3px 0 #d4789a; }
+  .score-pill span { font-size: 20px; }
+  .q-badge { background: var(--purple); color: white; border-radius: 50px; padding: 6px 18px; font-size: 14px; font-weight: 700; box-shadow: 0 3px 0 #7060cc; }
+  .prog-track { height: 8px; background: rgba(155,142,245,.2); border-radius: 8px; margin-bottom: 14px; overflow: hidden; }
+  .prog-fill { height: 100%; background: linear-gradient(90deg,var(--purple),var(--pink)); border-radius: 8px; transition: width .5s cubic-bezier(.4,0,.2,1); }
+
+  /* image card */
+  .img-card { border-radius: 24px; border: 3px solid var(--dark); overflow: hidden; margin-bottom: 14px; aspect-ratio: 16/9; position: relative; box-shadow: 5px 5px 0 var(--dark); }
+  .img-card-inner { width:100%;height:100%;display:flex;align-items:center;justify-content:center; }
+  .img-card-inner.emoji-mode { font-size: 100px; }
+  .img-card-inner.img-mode img { width:100%;height:100%;object-fit:cover; }
+  .img-card-inner.pop { animation: cardPop .4s ease; }
+  @keyframes cardPop{0%{transform:scale(.85)}60%{transform:scale(1.06)}100%{transform:scale(1)}}
+
+  .zh-label { text-align:center;font-size:14px;color:var(--gray);margin-bottom:14px;font-weight:700;letter-spacing:1px; }
+  .slots-row { display:flex;justify-content:center;gap:7px;flex-wrap:wrap;margin-bottom:6px; }
+  .slot { width:46px;height:52px;border-radius:12px;border:2.5px solid var(--dark);display:flex;align-items:center;justify-content:center;font-size:24px;font-weight:900;font-family:monospace;background:white;box-shadow:3px 3px 0 var(--dark);transition:all .2s;color:var(--dark); }
+  .slot.given{background:#e8e4ff;color:var(--purple);border-color:var(--purple);box-shadow:3px 3px 0 var(--purple)}
+  .slot.filled{background:#e0f0ff;border-color:var(--blue);box-shadow:3px 3px 0 var(--blue);color:#2266aa}
+  .slot.correct{background:#d4f0c4;border-color:#4a9922;box-shadow:3px 3px 0 #4a9922;color:#2a6010;animation:bounceSlot .35s ease}
+  .slot.wrong{background:#ffe0e0;border-color:#cc3333;box-shadow:3px 3px 0 #cc3333;color:#aa2222;animation:shakeSlot .35s ease}
+  @keyframes bounceSlot{0%{transform:scale(.7) rotate(-5deg)}60%{transform:scale(1.15) rotate(3deg)}100%{transform:scale(1) rotate(0)}}
+  @keyframes shakeSlot{0%,100%{transform:translateX(0)}25%{transform:translateX(-7px)}75%{transform:translateX(7px)}}
+  .feedback{text-align:center;font-size:16px;font-weight:800;min-height:26px;margin-bottom:10px}
+  .kb-wrap{background:white;border-radius:20px;border:2.5px solid var(--dark);padding:14px 10px;box-shadow:4px 4px 0 var(--dark)}
+  .kb-row{display:flex;justify-content:center;gap:5px;margin-bottom:5px}
+  .kb-row:last-child{margin-bottom:0}
+  .key{min-width:32px;height:44px;padding:0 7px;border-radius:10px;border:2px solid var(--dark);background:white;font-size:16px;font-weight:800;font-family:'Nunito',sans-serif;cursor:pointer;box-shadow:0 3px 0 var(--dark);transition:transform .1s,box-shadow .1s,background .15s;color:var(--dark);display:flex;align-items:center;justify-content:center;user-select:none}
+  .key:active{transform:translateY(3px);box-shadow:0 0 0 var(--dark)}
+  .key.k-correct{background:#d4f0c4;border-color:#4a9922;box-shadow:0 3px 0 #4a9922;color:#2a6010}
+  .key.k-wrong{background:#f0f0f0;color:#ccc;border-color:#ddd;box-shadow:0 3px 0 #ccc}
+  .key.k-del{font-size:13px;min-width:50px;background:#fff0f5;border-color:var(--pink);box-shadow:0 3px 0 #d4789a;color:#c0446a}
+  .btn-next{width:100%;margin-top:12px;padding:14px;border-radius:50px;border:2.5px solid var(--dark);background:var(--yellow);font-size:17px;font-weight:800;font-family:'Nunito',sans-serif;cursor:pointer;box-shadow:4px 4px 0 var(--dark);color:var(--dark);transition:transform .1s,box-shadow .1s;display:none}
+  .btn-next:active{transform:translate(3px,3px);box-shadow:1px 1px 0 var(--dark)}
+
+  /* confetti */
+  .confetti-container{position:fixed;inset:0;pointer-events:none;z-index:999}
+  .cf{position:absolute;width:10px;height:10px;border-radius:2px;animation:cfFall 1s ease forwards}
+  @keyframes cfFall{0%{opacity:1;transform:translateY(0) rotate(0)}100%{opacity:0;transform:translateY(var(--cy)) translateX(var(--cx)) rotate(var(--cr))}}
+
+  /* END */
+  #endScreen{background:radial-gradient(ellipse at 50% 20%,#ffeef6 0%,#f8d0e4 50%,#f0b8ce 100%)}
+  .end-card{background:white;border-radius:28px;border:3px solid var(--dark);box-shadow:6px 6px 0 var(--dark);padding:36px 32px;max-width:440px;width:100%;text-align:center;z-index:2}
+  .end-trophy{font-size:64px;margin-bottom:8px}
+  .end-big{font-size:52px;font-weight:900;color:var(--dark)}
+  .end-total{font-size:18px;color:var(--gray);font-weight:700;margin-bottom:4px}
+  .stars-row{font-size:32px;margin:8px 0 20px}
+  .end-msg{font-size:16px;font-weight:700;color:var(--purple);margin-bottom:20px}
+  .record-list{text-align:left;background:#fafafa;border-radius:14px;padding:12px 16px;margin-bottom:20px;max-height:200px;overflow-y:auto}
+  .record-item{display:flex;justify-content:space-between;align-items:center;padding:5px 0;font-size:14px;font-weight:700;border-bottom:1px solid #f0f0f0}
+  .record-item:last-child{border-bottom:none}
+  .r-correct{color:#2a6010}.r-wrong{color:#aa2222}
+  .end-btns{display:flex;flex-direction:column;gap:10px}
+  .btn-replay{width:100%;padding:14px;border-radius:50px;border:2.5px solid var(--dark);background:var(--pink);color:white;font-size:18px;font-weight:800;font-family:'Nunito',sans-serif;cursor:pointer;box-shadow:4px 4px 0 var(--dark);transition:transform .1s,box-shadow .1s}
+  .btn-replay:active{transform:translate(3px,3px);box-shadow:1px 1px 0 var(--dark)}
+  .btn-to-editor{width:100%;padding:12px;border-radius:50px;border:2.5px solid var(--dark);background:white;color:var(--dark);font-size:15px;font-weight:800;font-family:'Nunito',sans-serif;cursor:pointer;box-shadow:3px 3px 0 var(--dark);transition:transform .1s,box-shadow .1s}
+  .btn-to-editor:active{transform:translate(2px,2px);box-shadow:1px 1px 0 var(--dark)}
+
+  /* EDITOR */
+  #editorScreen{background:radial-gradient(ellipse at 40% 10%,#fff0f8 0%,#fce4f0 50%,#f8d0e4 100%);justify-content:flex-start;padding-top:24px;padding-bottom:40px}
+  .editor-wrapper{width:100%;max-width:640px;z-index:2}
+  .editor-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:20px}
+  .editor-title{font-size:26px;font-weight:900;color:var(--dark)}
+  .editor-title span{color:var(--pink)}
+  .btn-back{background:white;color:var(--dark);border:2.5px solid var(--dark);border-radius:50px;padding:8px 22px;font-size:14px;font-weight:800;font-family:'Nunito',sans-serif;cursor:pointer;box-shadow:3px 3px 0 var(--dark);transition:transform .1s}
+  .btn-back:active{transform:translate(2px,2px)}
+  .editor-stats{display:flex;gap:10px;margin-bottom:16px;flex-wrap:wrap}
+  .stat-chip{background:white;border:2px solid var(--dark);border-radius:50px;padding:6px 18px;font-size:14px;font-weight:700;color:var(--dark);box-shadow:2px 2px 0 var(--dark)}
+  .stat-chip b{color:var(--purple)}
+
+  .add-card{background:white;border-radius:20px;border:2.5px solid var(--dark);box-shadow:4px 4px 0 var(--dark);padding:20px;margin-bottom:20px}
+  .add-card-title{font-size:16px;font-weight:800;color:var(--dark);margin-bottom:14px;display:flex;align-items:center;gap:8px}
+  .add-card-title span{background:var(--purple);color:white;border-radius:50%;width:26px;height:26px;display:inline-flex;align-items:center;justify-content:center;font-size:14px}
+
+  /* image source tabs */
+  .img-tabs{display:flex;gap:0;margin-bottom:12px;border:2px solid var(--dark);border-radius:12px;overflow:hidden}
+  .img-tab{flex:1;padding:8px;font-size:13px;font-weight:800;font-family:'Nunito',sans-serif;border:none;background:white;color:var(--gray);cursor:pointer;transition:background .15s,color .15s}
+  .img-tab.active{background:var(--purple);color:white}
+  .img-tab-panel{display:none}
+  .img-tab-panel.active{display:block}
+
+  /* upload zone */
+  .upload-zone{border:2.5px dashed #ccc;border-radius:14px;padding:20px;text-align:center;cursor:pointer;transition:border-color .2s,background .2s;position:relative}
+  .upload-zone:hover,.upload-zone.dragover{border-color:var(--purple);background:#f5f0ff}
+  .upload-zone input{position:absolute;inset:0;opacity:0;cursor:pointer;width:100%;height:100%}
+  .upload-zone-icon{font-size:32px;margin-bottom:6px}
+  .upload-zone-text{font-size:13px;font-weight:700;color:var(--gray)}
+  .upload-preview{width:100%;max-height:120px;object-fit:cover;border-radius:10px;margin-top:10px;display:none;border:2px solid var(--purple)}
+
+  .form-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:12px}
+  .form-full{grid-column:1/-1}
+  .field-label{font-size:12px;font-weight:700;color:var(--gray);margin-bottom:4px;letter-spacing:.5px}
+  .field-label em{font-style:normal;color:var(--pink)}
+  .field-input{width:100%;padding:10px 14px;border-radius:12px;border:2px solid #ddd;font-size:15px;font-weight:700;font-family:'Nunito',sans-serif;color:var(--dark);outline:none;transition:border-color .2s}
+  .field-input:focus{border-color:var(--purple)}
+  .field-input.emoji-input{font-size:24px;text-align:center}
+  .hint-help{font-size:11px;color:var(--gray);margin-top:4px;font-weight:600}
+  .bg-selector{display:flex;gap:8px;flex-wrap:wrap}
+  .bg-opt{width:32px;height:32px;border-radius:8px;border:2.5px solid transparent;cursor:pointer;transition:transform .1s,border-color .1s}
+  .bg-opt:hover{transform:scale(1.1)}
+  .bg-opt.selected{border-color:var(--dark);transform:scale(1.1)}
+  .btn-add{width:100%;padding:12px;border-radius:50px;border:2.5px solid var(--dark);background:var(--mint);color:var(--dark);font-size:16px;font-weight:800;font-family:'Nunito',sans-serif;cursor:pointer;box-shadow:3px 3px 0 var(--dark);transition:transform .1s,box-shadow .1s}
+  .btn-add:active{transform:translate(2px,2px);box-shadow:1px 1px 0 var(--dark)}
+
+  /* list */
+  .q-list-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:10px}
+  .q-list-title{font-size:16px;font-weight:800;color:var(--dark)}
+  .search-input{padding:8px 14px;border-radius:50px;border:2px solid #ddd;font-size:13px;font-family:'Nunito',sans-serif;font-weight:700;outline:none;transition:border-color .2s;width:160px}
+  .search-input:focus{border-color:var(--purple)}
+  .q-list{display:flex;flex-direction:column;gap:8px}
+  .q-item{background:white;border-radius:16px;border:2px solid #e8e0ff;padding:12px 16px;display:flex;align-items:center;gap:12px;transition:border-color .2s;animation:slideIn .25s ease}
+  @keyframes slideIn{from{opacity:0;transform:translateY(-8px)}to{opacity:1;transform:translateY(0)}}
+  .q-item:hover{border-color:var(--purple)}
+  .q-thumb{width:52px;height:44px;border-radius:10px;object-fit:cover;border:2px solid #e8e0ff;flex-shrink:0}
+  .q-thumb-emoji{width:52px;height:44px;border-radius:10px;background:#f0eeff;display:flex;align-items:center;justify-content:center;font-size:28px;flex-shrink:0;border:2px solid #e8e0ff}
+  .q-info{flex:1;min-width:0}
+  .q-word{font-size:18px;font-weight:900;color:var(--dark)}
+  .q-hint-text{font-size:13px;color:var(--gray);font-weight:700;font-family:monospace}
+  .q-zh{font-size:12px;color:var(--purple);font-weight:700}
+  .q-actions{display:flex;gap:6px}
+  .btn-del{background:#fff0f5;border:2px solid var(--pink);border-radius:10px;padding:6px 12px;font-size:13px;font-weight:800;font-family:'Nunito',sans-serif;cursor:pointer;color:var(--red);box-shadow:2px 2px 0 #d4789a;transition:transform .1s}
+  .btn-del:active{transform:translate(1px,1px)}
+  .empty-state{text-align:center;padding:32px;color:var(--gray);font-size:15px;font-weight:700}
+  .empty-state div{font-size:40px;margin-bottom:12px}
+  .toast{position:fixed;bottom:24px;left:50%;transform:translateX(-50%);background:var(--dark);color:white;padding:10px 24px;border-radius:50px;font-size:14px;font-weight:700;font-family:'Nunito',sans-serif;z-index:9999;opacity:0;transition:opacity .3s;pointer-events:none;white-space:nowrap}
+  .toast.show{opacity:1}
+  .editor-actions{display:flex;gap:10px;margin-top:20px}
+  .btn-start-game{flex:2;padding:14px;border-radius:50px;border:2.5px solid var(--dark);background:var(--yellow);color:var(--dark);font-size:16px;font-weight:800;font-family:'Nunito',sans-serif;cursor:pointer;box-shadow:4px 4px 0 var(--dark);transition:transform .1s,box-shadow .1s}
+  .btn-start-game:active{transform:translate(3px,3px);box-shadow:1px 1px 0 var(--dark)}
+  .btn-export{flex:1;padding:14px;border-radius:50px;border:2.5px solid var(--dark);background:white;color:var(--dark);font-size:14px;font-weight:800;font-family:'Nunito',sans-serif;cursor:pointer;box-shadow:3px 3px 0 var(--dark);transition:transform .1s,box-shadow .1s}
+  .btn-export:active{transform:translate(2px,2px);box-shadow:1px 1px 0 var(--dark)}
+
+  .bg-purple{background:#c8beff}.bg-mint{background:#a0edcc}.bg-pink{background:#f5c0d4}.bg-blue{background:#b8d8f8}.bg-lavender{background:#d0c8ff}
+</style>
+</head>
+<body>
+
+<div class="deco deco-1">🌸</div>
+<div class="deco deco-2">⭐</div>
+<div class="deco deco-3">💫</div>
+<div class="deco deco-4">🌈</div>
+<div class="deco deco-5">✨</div>
+<div class="deco deco-6">🎀</div>
+<div id="confettiContainer" class="confetti-container"></div>
+<div class="toast" id="toast"></div>
+
+<!-- START -->
+<div id="startScreen" class="screen active">
+  <div class="start-content">
+    <div class="start-sub">讓我們一起來</div>
+    <div class="start-title">英文單字<br>遊戲</div>
+    <div class="start-btns">
+      <button class="btn-start" onclick="goReady()">開始遊戲</button>
+      <button class="btn-edit-link" onclick="goEditor()">✏️ 編輯題庫</button>
+    </div>
+  </div>
+</div>
+
+<!-- READY -->
+<div id="readyScreen" class="screen">
+  <div class="cloud-box">
+    <div class="ready-title">準備好了嗎？</div>
+    <button class="btn-ready" onclick="startGame()">馬上開始</button>
+  </div>
+</div>
+
+<!-- GAME -->
+<div id="gameScreen" class="screen">
+  <div class="game-wrapper">
+    <div class="top-bar">
+      <div class="score-pill">⭐ <span id="scoreNum">0</span></div>
+      <div class="q-badge" id="qBadge">1 / 15</div>
+    </div>
+    <div class="prog-track"><div class="prog-fill" id="progFill" style="width:0%"></div></div>
+    <div class="img-card">
+      <div class="img-card-inner bg-purple emoji-mode" id="imgDisplay">🐔</div>
+    </div>
+    <div class="zh-label" id="zhLabel">母雞</div>
+    <div class="slots-row" id="slotsRow"></div>
+    <div class="feedback" id="feedback"></div>
+    <div class="kb-wrap"><div id="keyboard"></div></div>
+    <button class="btn-next" id="btnNext" onclick="nextQ()">下一題 →</button>
+  </div>
+</div>
+
+<!-- END -->
+<div id="endScreen" class="screen">
+  <div class="end-card">
+    <div class="end-trophy" id="endTrophy">🏆</div>
+    <div class="end-big" id="endScore">0</div>
+    <div class="end-total" id="endTotal">/ 15 題</div>
+    <div class="stars-row" id="endStars">⭐⭐⭐</div>
+    <div class="end-msg" id="endMsg">太棒了！</div>
+    <div class="record-list" id="recordList"></div>
+    <div class="end-btns">
+      <button class="btn-replay" onclick="startGame()">再玩一次 ↻</button>
+      <button class="btn-to-editor" onclick="goEditor()">✏️ 編輯題庫</button>
+    </div>
+  </div>
+</div>
+
+<!-- EDITOR -->
+<div id="editorScreen" class="screen">
+  <div class="editor-wrapper">
+    <div class="editor-header">
+      <div class="editor-title">題庫<span>編輯器</span> ✏️</div>
+      <button class="btn-back" onclick="show('startScreen')">← 返回</button>
+    </div>
+    <div class="editor-stats">
+      <div class="stat-chip">共 <b id="totalCount">0</b> 題</div>
+      <div class="stat-chip">每局抽 <b>15</b> 題</div>
+    </div>
+
+    <div class="add-card">
+      <div class="add-card-title"><span>+</span> 新增題目</div>
+
+      <!-- Image Source Tabs -->
+      <div style="margin-bottom:12px">
+        <div class="field-label" style="margin-bottom:8px">圖示來源 <em>*</em></div>
+        <div class="img-tabs">
+          <button class="img-tab active" onclick="switchTab('emoji')">😀 Emoji</button>
+          <button class="img-tab" onclick="switchTab('upload')">📁 上傳圖片</button>
+          <button class="img-tab" onclick="switchTab('url')">🔗 圖片網址</button>
+        </div>
+
+        <!-- Emoji panel -->
+        <div class="img-tab-panel active" id="panel-emoji">
+          <div class="field-label">輸入 Emoji</div>
+          <input class="field-input emoji-input" id="f-emoji" placeholder="🐶" maxlength="4" style="width:100%">
+        </div>
+
+        <!-- Upload panel -->
+        <div class="img-tab-panel" id="panel-upload">
+          <div class="upload-zone" id="uploadZone" ondragover="onDragOver(event)" ondragleave="onDragLeave(event)" ondrop="onDrop(event)">
+            <input type="file" accept="image/*" id="fileInput" onchange="onFileSelect(event)">
+            <div class="upload-zone-icon">🖼️</div>
+            <div class="upload-zone-text">點擊選擇圖片，或拖曳到這裡<br><span style="font-size:11px;color:#bbb">支援 JPG、PNG、GIF、WebP</span></div>
+            <img id="uploadPreview" class="upload-preview" src="" alt="">
+          </div>
+        </div>
+
+        <!-- URL panel -->
+        <div class="img-tab-panel" id="panel-url">
+          <div class="field-label">貼上圖片網址</div>
+          <input class="field-input" id="f-url" placeholder="https://example.com/image.jpg" oninput="previewUrl()" style="width:100%;margin-bottom:8px">
+          <img id="urlPreview" style="width:100%;max-height:120px;object-fit:cover;border-radius:10px;display:none;border:2px solid var(--purple)" src="" alt="">
+        </div>
+      </div>
+
+      <div class="form-grid">
+        <div>
+          <div class="field-label">中文提示 <em>*</em></div>
+          <input class="field-input" id="f-zh" placeholder="狗">
+        </div>
+        <div>
+          <div class="field-label">英文單字 <em>*</em></div>
+          <input class="field-input" id="f-word" placeholder="dog" oninput="autoHint()">
+        </div>
+        <div class="form-full">
+          <div class="field-label">填空格式 <em>*</em></div>
+          <input class="field-input" id="f-hint" placeholder="d_g" style="font-family:monospace">
+          <div class="hint-help">用 _ 代表要猜的字母，例：d_g → 猜中間 o｜自動生成後可手動調整</div>
+        </div>
+        <div class="form-full">
+          <div class="field-label">卡片背景色（使用圖片時建議選淺色）</div>
+          <div class="bg-selector" id="bgSelector">
+            <div class="bg-opt bg-purple selected" data-bg="bg-purple" onclick="selectBg(this)" title="紫色"></div>
+            <div class="bg-opt bg-mint" data-bg="bg-mint" onclick="selectBg(this)" title="薄荷綠"></div>
+            <div class="bg-opt bg-pink" data-bg="bg-pink" onclick="selectBg(this)" title="粉紅"></div>
+            <div class="bg-opt bg-blue" data-bg="bg-blue" onclick="selectBg(this)" title="藍色"></div>
+            <div class="bg-opt bg-lavender" data-bg="bg-lavender" onclick="selectBg(this)" title="薰衣草"></div>
+          </div>
+        </div>
+      </div>
+      <button class="btn-add" onclick="addQuestion()">＋ 加入題庫</button>
+    </div>
+
+    <div class="q-list-header">
+      <div class="q-list-title">目前題庫</div>
+      <input class="search-input" id="searchInput" placeholder="🔍 搜尋..." oninput="renderList()">
+    </div>
+    <div class="q-list" id="qList"></div>
+
+    <div class="editor-actions">
+      <button class="btn-start-game" onclick="goReady()">▶ 開始遊戲</button>
+      <button class="btn-export" onclick="exportHTML()">💾 匯出 HTML</button>
+    </div>
+  </div>
+</div>
+
+<script>
+const DEFAULT_QUESTIONS = [
+  {type:"emoji",src:"🐔",word:"hen",  hint:"h_n",  zh:"母雞",  bg:"bg-purple"},
+  {type:"emoji",src:"👫",word:"men",  hint:"m_n",  zh:"男人們", bg:"bg-mint"},
+  {type:"emoji",src:"🖊️",word:"pen",  hint:"p__",  zh:"鋼筆",  bg:"bg-purple"},
+  {type:"emoji",src:"🔟",word:"ten",  hint:"t_n",  zh:"十",    bg:"bg-purple"},
+  {type:"emoji",src:"✈️",word:"jet",  hint:"j_t",  zh:"噴射機", bg:"bg-mint"},
+  {type:"emoji",src:"🥅",word:"net",  hint:"n_t",  zh:"網子",  bg:"bg-mint"},
+  {type:"emoji",src:"🐾",word:"pet",  hint:"p_t",  zh:"寵物",  bg:"bg-mint"},
+  {type:"emoji",src:"💉",word:"vet",  hint:"v_t",  zh:"獸醫",  bg:"bg-mint"},
+  {type:"emoji",src:"📦",word:"chest",hint:"ch__t",zh:"箱子",  bg:"bg-pink"},
+  {type:"emoji",src:"🪺",word:"nest", hint:"n__t", zh:"鳥巢",  bg:"bg-pink"},
+  {type:"emoji",src:"🛋️",word:"rest", hint:"r__t", zh:"休息",  bg:"bg-pink"},
+  {type:"emoji",src:"🧥",word:"vest", hint:"v__t", zh:"背心",  bg:"bg-pink"},
+  {type:"emoji",src:"🎂",word:"cake", hint:"c_k_", zh:"蛋糕",  bg:"bg-blue"},
+  {type:"emoji",src:"🏞️",word:"lake", hint:"l_k_", zh:"湖",    bg:"bg-blue"},
+  {type:"emoji",src:"🌾",word:"rake", hint:"r_k_", zh:"耙子",  bg:"bg-blue"},
+  {type:"emoji",src:"🐍",word:"snake",hint:"sn_k_",zh:"蛇",    bg:"bg-blue"},
+  {type:"emoji",src:"🌧️",word:"rain", hint:"r__n", zh:"雨",    bg:"bg-mint"},
+  {type:"emoji",src:"🐌",word:"snail",hint:"sn__l",zh:"蝸牛",  bg:"bg-mint"},
+  {type:"emoji",src:"🏺",word:"clay", hint:"cl_y", zh:"黏土",  bg:"bg-mint"},
+  {type:"emoji",src:"🩶",word:"gray", hint:"g__y", zh:"灰色",  bg:"bg-mint"},
+  {type:"emoji",src:"🫛",word:"beans",hint:"b__ns",zh:"豆子",  bg:"bg-blue"},
+  {type:"emoji",src:"🥩",word:"meat", hint:"m__t", zh:"肉",    bg:"bg-blue"},
+  {type:"emoji",src:"🦭",word:"seal", hint:"s__l", zh:"海豹",  bg:"bg-blue"},
+  {type:"emoji",src:"🍵",word:"tea",  hint:"t_a",  zh:"茶",    bg:"bg-blue"},
+  {type:"emoji",src:"🦶",word:"feet", hint:"f__t", zh:"腳",    bg:"bg-lavender"},
+  {type:"emoji",src:"🚙",word:"jeep", hint:"j__p", zh:"吉普車", bg:"bg-lavender"},
+  {type:"emoji",src:"🐑",word:"sheep",hint:"sh__p",zh:"羊",    bg:"bg-lavender"},
+  {type:"emoji",src:"😴",word:"sleep",hint:"s_e_p",zh:"睡覺",  bg:"bg-lavender"},
+  {type:"emoji",src:"🚲",word:"bike", hint:"b_ke", zh:"腳踏車", bg:"bg-lavender"},
+  {type:"emoji",src:"🪁",word:"kite", hint:"k_t_", zh:"風箏",  bg:"bg-lavender"},
+  {type:"emoji",src:"🛝",word:"slide",hint:"sl_d_",zh:"溜滑梯", bg:"bg-lavender"},
+  {type:"emoji",src:"👃",word:"nose", hint:"n_s_", zh:"鼻子",  bg:"bg-lavender"},
+  {type:"emoji",src:"🌹",word:"rose", hint:"r_s_", zh:"玫瑰",  bg:"bg-lavender"},
+  {type:"emoji",src:"🐦",word:"crow", hint:"c__w", zh:"烏鴉",  bg:"bg-lavender"},
+  {type:"emoji",src:"❄️",word:"snow", hint:"s__w", zh:"雪",    bg:"bg-lavender"},
+  {type:"emoji",src:"🛶",word:"boat", hint:"b__t", zh:"船",    bg:"bg-blue"},
+  {type:"emoji",src:"🧥",word:"coat", hint:"c__t", zh:"大衣",  bg:"bg-blue"},
+  {type:"emoji",src:"🐐",word:"goat", hint:"g__t", zh:"山羊",  bg:"bg-blue"},
+  {type:"emoji",src:"🧼",word:"soap", hint:"s__p", zh:"肥皂",  bg:"bg-blue"},
+];
+
+const ROWS=[['q','w','e','r','t','y','u','i','o','p'],['a','s','d','f','g','h','j','k','l'],['z','x','c','v','b','n','m','⌫']];
+const TOTAL=15;
+let QUESTIONS,deck,qi,score,typed,usedKeys,answered,history,audioCtx;
+let currentTab='emoji', selectedBg='bg-purple', uploadedBase64='';
+
+function loadQuestions(){
+  try{ const s=localStorage.getItem('wg_questions_v2'); QUESTIONS=s?JSON.parse(s):[...DEFAULT_QUESTIONS]; }
+  catch(e){ QUESTIONS=[...DEFAULT_QUESTIONS]; }
+}
+function saveQuestions(){ try{localStorage.setItem('wg_questions_v2',JSON.stringify(QUESTIONS));}catch(e){} }
+
+function show(id){ document.querySelectorAll('.screen').forEach(s=>s.classList.remove('active')); document.getElementById(id).classList.add('active'); window.scrollTo(0,0); }
+function goReady(){ if(QUESTIONS.length<1){showToast('題庫是空的，請先新增題目！');return;} show('readyScreen'); }
+function goEditor(){ renderList(); updateStats(); show('editorScreen'); }
+
+function showToast(msg){ const t=document.getElementById('toast'); t.textContent=msg; t.classList.add('show'); setTimeout(()=>t.classList.remove('show'),2400); }
+
+// ── Tab switching ──
+function switchTab(tab){
+  currentTab=tab;
+  document.querySelectorAll('.img-tab').forEach((el,i)=>{
+    el.classList.toggle('active',['emoji','upload','url'][i]===tab);
+  });
+  document.querySelectorAll('.img-tab-panel').forEach(p=>p.classList.remove('active'));
+  document.getElementById('panel-'+tab).classList.add('active');
+}
+
+// ── Upload ──
+function onFileSelect(e){ if(e.target.files[0]) readFile(e.target.files[0]); }
+function onDragOver(e){ e.preventDefault(); document.getElementById('uploadZone').classList.add('dragover'); }
+function onDragLeave(){ document.getElementById('uploadZone').classList.remove('dragover'); }
+function onDrop(e){ e.preventDefault(); document.getElementById('uploadZone').classList.remove('dragover'); if(e.dataTransfer.files[0]) readFile(e.dataTransfer.files[0]); }
+function readFile(file){
+  if(!file.type.startsWith('image/')){ showToast('請選擇圖片檔案！'); return; }
+  if(file.size > 3*1024*1024){ showToast('圖片太大了，請選擇 3MB 以下的圖片'); return; }
+  const reader=new FileReader();
+  reader.onload=e=>{
+    uploadedBase64=e.target.result;
+    const prev=document.getElementById('uploadPreview');
+    prev.src=uploadedBase64; prev.style.display='block';
+    document.querySelector('.upload-zone-icon').style.display='none';
+    document.querySelector('.upload-zone-text').style.display='none';
+    showToast('圖片已載入！');
+  };
+  reader.readAsDataURL(file);
+}
+
+// ── URL preview ──
+function previewUrl(){
+  const url=document.getElementById('f-url').value.trim();
+  const prev=document.getElementById('urlPreview');
+  if(url){ prev.src=url; prev.style.display='block'; prev.onerror=()=>{ prev.style.display='none'; }; }
+  else { prev.style.display='none'; }
+}
+
+function selectBg(el){ document.querySelectorAll('.bg-opt').forEach(o=>o.classList.remove('selected')); el.classList.add('selected'); selectedBg=el.dataset.bg; }
+
+function autoHint(){
+  const word=document.getElementById('f-word').value.toLowerCase().trim();
+  if(!word) return;
+  let hint='';
+  if(word.length===1) hint=word;
+  else if(word.length===2) hint=word[0]+'_';
+  else hint=word[0]+word.slice(1,-1).split('').map(()=>'_').join('')+word[word.length-1];
+  document.getElementById('f-hint').value=hint;
+}
+
+function getSrc(){
+  if(currentTab==='emoji') return { type:'emoji', src: document.getElementById('f-emoji').value.trim() };
+  if(currentTab==='upload') return { type:'image', src: uploadedBase64 };
+  if(currentTab==='url') return { type:'image', src: document.getElementById('f-url').value.trim() };
+  return null;
+}
+
+function addQuestion(){
+  const imgData=getSrc();
+  const zh=document.getElementById('f-zh').value.trim();
+  const word=document.getElementById('f-word').value.toLowerCase().trim();
+  const hint=document.getElementById('f-hint').value.toLowerCase().trim();
+  if(!imgData||!imgData.src){ showToast('請提供圖示（Emoji、上傳圖片或網址）！'); return; }
+  if(!zh||!word||!hint){ showToast('請填寫中文提示、英文單字和填空格式！'); return; }
+  if(hint.length!==word.length){ showToast(`填空格式長度（${hint.length}）要和單字長度（${word.length}）一樣！`); return; }
+  if(!(hint.match(/_/g)||[]).length){ showToast('填空格式至少要有一個空格 _'); return; }
+  QUESTIONS.push({type:imgData.type, src:imgData.src, word, hint, zh, bg:selectedBg});
+  saveQuestions();
+  // reset
+  document.getElementById('f-emoji').value='';
+  document.getElementById('f-zh').value='';
+  document.getElementById('f-word').value='';
+  document.getElementById('f-hint').value='';
+  document.getElementById('f-url').value='';
+  document.getElementById('urlPreview').style.display='none';
+  document.getElementById('uploadPreview').style.display='none';
+  document.getElementById('uploadPreview').src='';
+  document.querySelector('.upload-zone-icon').style.display='block';
+  document.querySelector('.upload-zone-text').style.display='block';
+  document.getElementById('fileInput').value='';
+  uploadedBase64='';
+  updateStats(); renderList();
+  showToast(`✓ 已新增：${word}`);
+}
+
+function deleteQuestion(i){ const q=QUESTIONS[i]; QUESTIONS.splice(i,1); saveQuestions(); updateStats(); renderList(); showToast(`已刪除：${q.word}`); }
+function updateStats(){ document.getElementById('totalCount').textContent=QUESTIONS.length; }
+
+function renderList(){
+  const search=(document.getElementById('searchInput').value||'').toLowerCase();
+  const container=document.getElementById('qList');
+  const filtered=QUESTIONS.map((q,i)=>({...q,i})).filter(q=>!search||q.word.includes(search)||q.zh.includes(search)||q.hint.includes(search));
+  if(!filtered.length){
+    container.innerHTML=`<div class="empty-state"><div>${search?'🔍':'📭'}</div>${search?'找不到符合的題目':'題庫是空的，請新增題目！'}</div>`;
+    return;
+  }
+  container.innerHTML=filtered.map(q=>`
+    <div class="q-item">
+      ${q.type==='emoji'
+        ? `<div class="q-thumb-emoji">${q.src}</div>`
+        : `<img class="q-thumb" src="${q.src}" alt="${q.zh}">`}
+      <div class="q-info">
+        <div class="q-word">${q.word}</div>
+        <div class="q-hint-text">${q.hint}</div>
+        <div class="q-zh">${q.zh}</div>
+      </div>
+      <div class="q-actions">
+        <button class="btn-del" onclick="deleteQuestion(${q.i})">✕ 刪除</button>
+      </div>
+    </div>
+  `).join('');
+}
+
+function exportHTML(){
+  const qJson=JSON.stringify(QUESTIONS,null,2);
+  const src=document.documentElement.outerHTML;
+  const updated=src.replace(/const DEFAULT_QUESTIONS = \[[\s\S]*?\];/,`const DEFAULT_QUESTIONS = ${qJson};`);
+  const blob=new Blob([updated],{type:'text/html'});
+  const a=document.createElement('a');
+  a.href=URL.createObjectURL(blob);
+  a.download='english_word_game.html';
+  a.click();
+  showToast('💾 已匯出！圖片已一併打包進檔案');
+}
+
+// ── Game ──
+function shuffle(arr){const a=[...arr];for(let i=a.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[a[i],a[j]]=[a[j],a[i]];}return a;}
+function startGame(){ const total=Math.min(TOTAL,QUESTIONS.length); deck=shuffle(QUESTIONS).slice(0,total); qi=0; score=0; history=[]; show('gameScreen'); renderQ(); }
+function getAudio(){ if(!audioCtx) audioCtx=new(window.AudioContext||window.webkitAudioContext)(); return audioCtx; }
+function playSound(type){
+  try{const ctx=getAudio(),osc=ctx.createOscillator(),gain=ctx.createGain();osc.connect(gain);gain.connect(ctx.destination);const t=ctx.currentTime;
+  if(type==='key'){osc.type='sine';osc.frequency.value=500;gain.gain.setValueAtTime(0.05,t);gain.gain.exponentialRampToValueAtTime(0.001,t+0.07);osc.start();osc.stop(t+0.07);}
+  else if(type==='correct'){osc.type='sine';[523,659,784].forEach((f,i)=>osc.frequency.setValueAtTime(f,t+i*0.1));gain.gain.setValueAtTime(0.15,t);gain.gain.exponentialRampToValueAtTime(0.001,t+0.5);osc.start();osc.stop(t+0.5);}
+  else if(type==='wrong'){osc.type='sawtooth';osc.frequency.setValueAtTime(240,t);osc.frequency.setValueAtTime(190,t+0.1);gain.gain.setValueAtTime(0.1,t);gain.gain.exponentialRampToValueAtTime(0.001,t+0.3);osc.start();osc.stop(t+0.3);}
+  else if(type==='end'){[523,659,784,1047].forEach((f,i)=>{const o=ctx.createOscillator(),g=ctx.createGain();o.connect(g);g.connect(ctx.destination);o.type='sine';o.frequency.value=f;g.gain.setValueAtTime(0.12,t+i*0.14);g.gain.exponentialRampToValueAtTime(0.001,t+i*0.14+0.4);o.start(t+i*0.14);o.stop(t+i*0.14+0.4);});}
+  }catch(e){}}
+function spawnConfetti(){const cont=document.getElementById('confettiContainer');const colors=['#9B8EF5','#F2A7C3','#F5D76E','#7DDCB5','#8BC4F5','#ff9999'];for(let i=0;i<30;i++){const el=document.createElement('div');el.className='cf';el.style.background=colors[i%colors.length];el.style.left=(20+Math.random()*60)+'%';el.style.top=(10+Math.random()*30)+'%';el.style.setProperty('--cx',(Math.random()-0.5)*200+'px');el.style.setProperty('--cy',(100+Math.random()*200)+'px');el.style.setProperty('--cr',(Math.random()*360)+'deg');el.style.animationDelay=(Math.random()*0.3)+'s';cont.appendChild(el);setTimeout(()=>el.remove(),1200);}}
+
+function renderQ(){
+  const q=deck[qi]; const total=deck.length;
+  document.getElementById('scoreNum').textContent=score;
+  document.getElementById('qBadge').textContent=`${qi+1} / ${total}`;
+  document.getElementById('progFill').style.width=(qi/total*100)+'%';
+
+  const img=document.getElementById('imgDisplay');
+  if(q.type==='emoji'){
+    img.className='img-card-inner '+(q.bg||'bg-purple')+' emoji-mode';
+    img.innerHTML=q.src;
+  } else {
+    img.className='img-card-inner '+(q.bg||'bg-purple')+' img-mode';
+    img.innerHTML=`<img src="${q.src}" alt="${q.zh}">`;
+  }
+  void img.offsetWidth; img.classList.add('pop');
+
+  document.getElementById('zhLabel').textContent=q.zh;
+  document.getElementById('feedback').textContent='';
+  document.getElementById('btnNext').style.display='none';
+  typed=[];usedKeys={};answered=false;
+  renderSlots(); renderKeyboard();
+}
+
+function renderSlots(){
+  const q=deck[qi];const h=q.hint,w=q.word;let html='',ti=0;
+  for(let i=0;i<h.length;i++){
+    if(h[i]==='_'){const tc=typed[ti]||'';let cls='slot';if(answered)cls+=(tc===w[i])?' correct':' wrong';else if(tc)cls+=' filled';html+=`<div class="${cls}">${tc}</div>`;ti++;}
+    else html+=`<div class="slot given">${h[i]}</div>`;
+  }
+  document.getElementById('slotsRow').innerHTML=html;
+}
+function renderKeyboard(){
+  const html=ROWS.map(row=>`<div class="kb-row">${row.map(k=>{let cls='key';if(k==='⌫')cls+=' k-del';if(usedKeys[k]==='correct')cls+=' k-correct';else if(usedKeys[k]==='wrong')cls+=' k-wrong';return`<div class="${cls}" onclick="pressKey('${k}')">${k}</div>`;}).join('')}</div>`).join('');
+  document.getElementById('keyboard').innerHTML=html;
+}
+function pressKey(k){
+  if(answered)return;
+  const q=deck[qi];const blanks=(q.hint.match(/_/g)||[]).length;
+  if(k==='⌫'){if(typed.length>0){typed.pop();playSound('key');renderSlots();renderKeyboard();}return;}
+  if(typed.length>=blanks)return;
+  playSound('key');typed.push(k);renderSlots();
+  if(typed.length===blanks)setTimeout(checkAnswer,80);
+}
+function checkAnswer(){
+  answered=true;const q=deck[qi];const h=q.hint,w=q.word;let ti=0,allOk=true;
+  for(let i=0;i<h.length;i++){if(h[i]==='_'){const tc=typed[ti]||'',rc=w[i];if(tc!==rc){allOk=false;if(!usedKeys[tc])usedKeys[tc]='wrong';}else usedKeys[tc]='correct';ti++;}}
+  if(allOk){score++;document.getElementById('scoreNum').textContent=score;document.getElementById('scoreNum').style.transform='scale(1.4)';setTimeout(()=>document.getElementById('scoreNum').style.transform='',300);playSound('correct');spawnConfetti();document.getElementById('feedback').innerHTML='<span style="color:#2a6010">✓ 答對了！太棒了！🎉</span>';}
+  else{playSound('wrong');document.getElementById('feedback').innerHTML=`<span style="color:#aa2222">✗ 正確答案是：<b>${q.word}</b></span>`;}
+  history.push({word:q.word,zh:q.zh,correct:allOk});
+  renderSlots();renderKeyboard();
+  document.getElementById('btnNext').style.display='block';
+  document.getElementById('btnNext').textContent=qi+1<deck.length?'下一題 →':'查看結果 →';
+}
+function nextQ(){ qi++; if(qi>=deck.length){showEnd();return;} renderQ(); }
+function showEnd(){
+  playSound('end');show('endScreen');
+  const total=deck.length;const pct=score/total;
+  document.getElementById('endScore').textContent=score;
+  document.getElementById('endTotal').textContent=`/ ${total} 題`;
+  document.getElementById('endTrophy').textContent=pct>=0.8?'🏆':pct>=0.5?'🥈':'🥉';
+  document.getElementById('endStars').textContent=pct>=0.9?'⭐⭐⭐':pct>=0.6?'⭐⭐':'⭐';
+  document.getElementById('endMsg').textContent=pct>=0.8?'超棒！你是單字達人！':pct>=0.5?'還不錯，繼續練習吧！':'加油！多練習會進步的！';
+  document.getElementById('recordList').innerHTML=history.map((h,i)=>`<div class="record-item ${h.correct?'r-correct':'r-wrong'}"><span>${i+1}. ${h.word}（${h.zh}）</span><span>${h.correct?'✓':'✗'}</span></div>`).join('');
+  setTimeout(spawnConfetti,200);setTimeout(spawnConfetti,600);
+}
+
+loadQuestions();
+</script>
+</body>
+</html>
